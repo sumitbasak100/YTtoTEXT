@@ -8,7 +8,7 @@ def clean_srt_captions(srt_text):
     # Remove timestamps and blank lines from SRT text
     return re.sub(r'\d+\n[\d:,]+ --> [\d:,]+\n', '', srt_text).strip()
 
-def convert_youtube_to_text(url, language_code=None):
+def convert_youtube_to_text(url, language_code):
     try:
         yt = YouTube(url)
         available_languages = yt.captions.keys()
