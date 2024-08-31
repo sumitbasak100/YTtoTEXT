@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from pytube import YouTube
 import re
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptAvailable
 from youtube_transcript_api.formatters import JSONFormatter
+import time
 
 app = Flask(__name__)
 
@@ -38,14 +39,21 @@ def get_pytube_captions(url):
         return {"error": str(e)}
 
 def get_youtube_transcript(url):
-    try:
-        video_id = url.split('v=')[-1]
-        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en_auto'])
-        formatter = JSONFormatter()
-        formatted_transcript = formatter.format_transcript(transcript)
-        return {"text": formatted_transcript}
-    except Exception as e:
-        return {"error": str(e)}
+    video_id = url.split('v=')[-1]
+    retries = 3
+    for attempt in range(retries):
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en_auto'])
+            formatter = JSONFormatter()
+            formatted_transcript = formatter.format_transcript(transcript)
+            return {"text": formatted_transcript}
+        except (TranscriptsDisabled, NoTranscriptAvailable) as e:
+            return {"error": "No transcript available for this video."}
+        except Exception as e:
+            if attempt < retries - 1:
+                time.sleep(5)  # Wait before retrying
+            else:
+                return {"error": str(e)}
 
 @app.route('/convert', methods=['POST'])
 def convert():
