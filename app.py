@@ -3,25 +3,27 @@ from pytube import YouTube
 
 app = Flask(__name__)
 
-def convert_youtube_to_text(url):
+def convert_youtube_to_text(url, language_code='en'):
     try:
         yt = YouTube(url)
-        captions = yt.captions.get_by_language_code('en')
+        captions = yt.captions.get_by_language_code(language_code)
         if captions:
             text = captions.generate_srt_captions()
             return text.strip()
         else:
-            return "No English captions available for this video."
+            available_languages = ', '.join(yt.captions.keys())
+            return f"No captions available for '{language_code}'. Available languages: {available_languages}."
     except Exception as e:
         return str(e)
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    if 'url' not in request.form:
+    url = request.form.get('url')
+    if not url:
         return jsonify(error="No URL provided"), 400
 
-    url = request.form['url']
-    text = convert_youtube_to_text(url)
+    language_code = request.form.get('language_code', 'en')
+    text = convert_youtube_to_text(url, language_code)
 
     return jsonify(text=text), 200
 
