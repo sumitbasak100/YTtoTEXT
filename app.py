@@ -8,17 +8,23 @@ def clean_srt_captions(srt_text):
     # Remove timestamps and blank lines from SRT text
     return re.sub(r'\d+\n[\d:,]+ --> [\d:,]+\n', '', srt_text).strip()
 
-def convert_youtube_to_text(url, language_code='en'):
+def convert_youtube_to_text(url, language_code=None):
     try:
         yt = YouTube(url)
-        captions = yt.captions.get_by_language_code(language_code)
-        if captions:
+        available_languages = yt.captions.keys()
+        
+        if not language_code:
+            # Use the first available language code if none is provided
+            language_code = next(iter(available_languages), None)
+
+        if language_code and language_code in available_languages:
+            captions = yt.captions.get_by_language_code(language_code)
             srt_text = captions.generate_srt_captions()
             text = clean_srt_captions(srt_text)
             return {"text": text}
         else:
-            available_languages = ', '.join(yt.captions.keys())
-            return {"error": f"No captions available for '{language_code}'. Available languages: {available_languages}."}
+            available_languages_str = ', '.join(available_languages)
+            return {"error": f"No captions available for '{language_code}'. Available languages: {available_languages_str}."}
     except Exception as e:
         return {"error": str(e)}
 
@@ -28,7 +34,7 @@ def convert():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    language_code = request.form.get('language_code', 'en')
+    language_code = request.form.get('language_code')
     response = convert_youtube_to_text(url, language_code)
 
     return jsonify(response), 200
